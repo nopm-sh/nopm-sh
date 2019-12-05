@@ -1,0 +1,15 @@
+{{define "content"}}
+<h1 class="cover-heading">Is it safe to use nopm.sh scripts?</h1>
+<hr/>
+<p>
+  Nopm.sh allows you to run shell scripts downloaded from our github repository
+  <a href="http://github.com/nopm-sh/recipes">nopm-sh/recipes</a>.
+</br>
+Serverd scripts content can be modified by nopm.sh dynamically to inject or modify original script content.<br/>
+Modifications are controlled by specific markups used in the comments of schell script.<br/>
+The open source code of this whole service is available here: <a href="http://github.com/nopm-sh/nopm-sh">nopm-sh/nopm-sh</a>.</p>
+<blockquote>
+  <p class="mb-2"><code>curl | sh</code> is certainly not a perfectly secure method, just no different than <code>git clone && cd dir && make</code></p>
+  <span>Senior software engineer Martin Tournoij in <cite title="Source Title"><a href="https://www.arp242.net/curl-to-sh.html">Curl to shell isn’t so bad</a></cite></span>
+</blockquote>
+{{end}}

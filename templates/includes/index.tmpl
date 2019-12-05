@@ -1,0 +1,18 @@
+{{define "content"}}
+<div class="container">
+  <h1 class="cover-heading">nopm.sh - No Package Manager</h1>
+  <hr/>
+  <p class="lead">
+    No-brainer installation. Install softwares with curl and bash.<br/>
+    Do you want to install the latest version of <a href="/recipes/terraform">terraform</a> in a one-liner?
+
+    <pre>curl nopm.sh/terraform | sh</pre>
+</p>
+<p class="lead">
+    You can also install a specific version:
+
+    <pre>curl nopm.sh/terraform@0.12.17 | sh</pre>
+  </p>
+  <a href="/recipes" class="mt-3 btn btn-success">View all recipes &raquo;</a>
+</div>
+{{end}}

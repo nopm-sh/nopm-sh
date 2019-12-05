@@ -1,0 +1,5 @@
+node_modules/*
+nopm-sh
+.DS_Store
+tmp
+*.log

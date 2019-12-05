@@ -1,0 +1,4 @@
+nopm-sh
+*.log
+tmp
+node_modules
