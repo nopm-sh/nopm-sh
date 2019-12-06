@@ -305,9 +305,18 @@ func formatAsDate(t time.Time) string {
 
 func main() {
 	flag.StringVar(&listenAddr, "listen-addr", ":8080", "server listen address")
-	flag.StringVar(&staticBaseURL, "static-base-url", "http://localhost:8081", "static files base URL")
+	flag.StringVar(&staticBaseURL, "static-base-url", "", "static files base URL")
 	flag.StringVar(&templatesDir, "templates-dir", "./templates", "templates directory")
 	flag.Parse()
+
+	if staticBaseURL == "" {
+		staticBaseURL = os.Getenv("STATIC_BASE_URL")
+	}
+
+	if staticBaseURL == "" {
+		staticBaseURL = "./templates"
+	}
+
 	//
 	// router := http.NewServeMux()
 	// router.Handle("/", responseLogger(indexHandler()))
