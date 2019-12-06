@@ -26,15 +26,16 @@ jobs:
 
     - name: Tests
       run: go test -v ./...
+
     - name: docker build
-      uses: ac
-      with:
-        args: build -t nopm/nopm-sh .
+      run: docker build -t nopmsh/nopm-sh .
+
     - name: docker login
       uses: actions-hub/docker/login@master
       env:
         DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
         DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+
     - name: docker push
       uses: actions-hub/docker@master
       with:
