@@ -27,9 +27,9 @@ jobs:
     - name: Tests
       run: go test -v ./...
     - name: docker build
-        uses: actions/docker/cli@master
-        with:
-          args: build -t abhinavdhasmana/github-action-example-node .
+      uses: actions/docker/cli@master
+      with:
+        args: build -t nopm/nopm-sh .
     - name: docker login
       uses: actions/docker/login@master
       env:
