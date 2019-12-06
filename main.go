@@ -30,6 +30,7 @@ var (
 	log           = logrus.New()
 	listenAddr    string
 	staticBaseURL string
+	templatesDir  string
 )
 
 type RecipeQuery struct {
@@ -265,14 +266,14 @@ func Base() gin.HandlerFunc {
 	}
 }
 
-func loadTemplates(templatesDir string) multitemplate.Renderer {
+func loadTemplates(dir string) multitemplate.Renderer {
 	r := multitemplate.NewRenderer()
-	layouts, err := filepath.Glob(templatesDir + "/layouts/*.tmpl")
+	layouts, err := filepath.Glob(dir + "/layouts/*.tmpl")
 	if err != nil {
 		panic(err.Error())
 	}
 
-	includes, err := filepath.Glob(templatesDir + "/includes/*.tmpl")
+	includes, err := filepath.Glob(dir + "/includes/*.tmpl")
 	if err != nil {
 		panic(err.Error())
 	}
@@ -305,6 +306,7 @@ func formatAsDate(t time.Time) string {
 func main() {
 	flag.StringVar(&listenAddr, "listen-addr", ":8080", "server listen address")
 	flag.StringVar(&staticBaseURL, "static-base-url", "http://localhost:8081", "static files base URL")
+	flag.StringVar(&templatesDir, "templates-dir", "./templates", "templates directory")
 	flag.Parse()
 	//
 	// router := http.NewServeMux()
@@ -328,7 +330,7 @@ func main() {
 	router.Use(gin.Recovery())
 	router.Use(Base())
 
-	router.HTMLRender = loadTemplates("./templates")
+	router.HTMLRender = loadTemplates(templatesDir)
 	router.GET("/", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "index.tmpl", gin.H{
 			"c":              c,
