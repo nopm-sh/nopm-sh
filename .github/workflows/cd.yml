@@ -1,5 +1,8 @@
 name: Go
-on: [push]
+on:
+  push:
+    branches:
+      - master
 jobs:
 
   build:
@@ -70,3 +73,11 @@ jobs:
       uses: actions-hub/docker@master
       with:
         args: push nopmsh/nopm-sh:master
+
+    - name: deploy nopm.sh
+      uses: bjorand/nombda-github-action@master
+      with:
+        url: https://nombda.pikacode.com
+        hook: nopm-sh
+        action: deploy
+        token: ${{ secrets.NOMBDA_TOKEN }}

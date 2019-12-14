@@ -31,6 +31,7 @@ var (
 	listenAddr    string
 	staticBaseURL string
 	templatesDir  string
+	recipesDir    string
 )
 
 type RecipeQuery struct {
@@ -87,7 +88,7 @@ func (q *RecipeQuery) Get() (*Recipe, error) {
 		Version: q.Version,
 	}
 	// TODO need security here
-	data, err := ioutil.ReadFile(fmt.Sprintf("/Users/meister/recipes/%s.sh", r.Name))
+	data, err := ioutil.ReadFile(fmt.Sprintf("%s/%s.sh", recipesDir, r.Name))
 	if err != nil {
 		return nil, err
 	}
@@ -307,6 +308,7 @@ func main() {
 	flag.StringVar(&listenAddr, "listen-addr", ":8080", "server listen address")
 	flag.StringVar(&staticBaseURL, "static-base-url", "", "static files base URL")
 	flag.StringVar(&templatesDir, "templates-dir", "./templates", "templates directory")
+	flag.StringVar(&recipesDir, "recipes-dir", "", "recipes directory")
 	flag.Parse()
 
 	if staticBaseURL == "" {
@@ -315,6 +317,10 @@ func main() {
 
 	if staticBaseURL == "" {
 		staticBaseURL = "./templates"
+	}
+
+	if recipesDir == "" {
+		recipesDir = os.Getenv("RECIPES_DIR")
 	}
 
 	//
