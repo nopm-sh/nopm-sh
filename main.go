@@ -33,6 +33,7 @@ var (
 	templatesDir  string
 	recipesDir    string
 	version       string
+	showVersion   bool
 )
 
 type RecipeQuery struct {
@@ -310,7 +311,13 @@ func main() {
 	flag.StringVar(&staticBaseURL, "static-base-url", "", "static files base URL")
 	flag.StringVar(&templatesDir, "templates-dir", "./templates", "templates directory")
 	flag.StringVar(&recipesDir, "recipes-dir", "", "recipes directory")
+	flag.BoolVar(&showVersion, "version", false, "show version")
 	flag.Parse()
+
+	if showVersion {
+		fmt.Printf("nopm-sh version %s", version)
+		os.Exit(0)
+	}
 
 	if staticBaseURL == "" {
 		staticBaseURL = os.Getenv("STATIC_BASE_URL")
