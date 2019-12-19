@@ -118,7 +118,7 @@ func (q *RecipeQuery) Get() (*Recipe, error) {
 }
 
 func All() ([]*Recipe, error) {
-	recipesFilenames, err := filepath.Glob("/Users/meister/recipes/*.sh")
+	recipesFilenames, err := filepath.Glob(fmt.Sprintf("%s/*.sh", recipesDir))
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +147,7 @@ func isVersion(v string) bool {
 }
 
 func (r *Recipe) loadMoreMD() error {
-	data, err := ioutil.ReadFile(fmt.Sprintf("/Users/meister/recipes/%s.more.md", r.Name))
+	data, err := ioutil.ReadFile(fmt.Sprintf("%s/%s.more.md", recipesDir, r.Name))
 	if err != nil {
 		return err
 	}
@@ -331,6 +331,10 @@ func main() {
 		recipesDir = os.Getenv("RECIPES_DIR")
 	}
 
+	githubToken := os.Getenv("GITHUB_TOKEN")
+	if githubToken == "" {
+		log.Fatal("GITHUB_TOKEN environment variable empty")
+	}
 	//
 	// router := http.NewServeMux()
 	// router.Handle("/", responseLogger(indexHandler()))
@@ -352,6 +356,11 @@ func main() {
 	router := gin.Default()
 	router.Use(gin.Recovery())
 	router.Use(Base())
+
+	recipeRegexp, err := regexp.Compile("^/([^/]+)$")
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	router.HTMLRender = loadTemplates(templatesDir)
 	router.GET("/", func(c *gin.Context) {
@@ -411,7 +420,7 @@ func main() {
 		// ext := c.Param("ext")
 		ctx := context.Background()
 		ts := oauth2.StaticTokenSource(
-			&oauth2.Token{AccessToken: "67320610138359eb4487b6796becfc837cf9a0e0"},
+			&oauth2.Token{AccessToken: githubToken},
 		)
 		tc := oauth2.NewClient(ctx, ts)
 		var rID int64
@@ -469,11 +478,43 @@ func main() {
 	router.NoRoute(func(c *gin.Context) {
 		path := c.Request.URL.Path
 		method := c.Request.Method
-		fmt.Println(path)
-		fmt.Println(method)
-		if strings.HasPrefix(path, "/show") {
-			fmt.Println("ok")
+		switch method {
+		case "HEAD":
+			recipeRawNameMatch := recipeRegexp.FindStringSubmatch(path)
+			if len(recipeRawNameMatch) == 2 {
+				recipeQuery := ParseRecipeRawName(recipeRawNameMatch[1])
+				_, err := recipeQuery.Get()
+				if err != nil {
+					c.String(http.StatusNotFound, "Recipe not found")
+					return
+				}
+				if method == "HEAD" {
+					c.String(http.StatusFound, "")
+					return
+				}
+			}
+		case "GET":
+			recipeRawNameMatch := recipeRegexp.FindStringSubmatch(path)
+			if len(recipeRawNameMatch) == 2 {
+				recipeQuery := ParseRecipeRawName(recipeRawNameMatch[1])
+				recipe, err := recipeQuery.Get()
+				if err != nil {
+					c.String(http.StatusNotFound, "Recipe not found")
+					return
+				}
+				if method == "HEAD" {
+					c.String(http.StatusFound, "Recipe exists")
+					return
+				}
+				render, err := recipe.Render()
+				if err != nil {
+					c.String(http.StatusBadRequest, err.Error())
+					return
+				}
+				c.String(http.StatusOK, string(render))
+			}
 		}
+
 	})
 	router.GET("/search/:input", func(c *gin.Context) {
 		input := strings.ToLower(c.Param("input"))
