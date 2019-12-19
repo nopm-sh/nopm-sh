@@ -32,6 +32,7 @@ var (
 	staticBaseURL string
 	templatesDir  string
 	recipesDir    string
+	version       string
 )
 
 type RecipeQuery struct {
@@ -351,6 +352,9 @@ func main() {
 			"c":              c,
 			"activeNavIndex": "active",
 		})
+	})
+	router.GET("/ping", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"version": version})
 	})
 	router.GET("/docs", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "docs.tmpl", gin.H{
