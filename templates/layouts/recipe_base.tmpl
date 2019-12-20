@@ -1,0 +1,51 @@
+{{define "content"}}
+
+<h2 class="cover-heading">{{ .recipe.Name }} <small>0.0.4</small></h2>
+
+
+
+<ul class="nav nav-tabs mb-3">
+  <li class="nav-item">
+    <a class="nav-link {{ .activeTabReadme }}" href="/recipes/{{ .recipe.Name }}"><i class="icon ion-md-book mr-2"></i> Readme</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {{ .activeTabSource }}" href="/recipes/{{ .recipe.Name }}/source"><i class="icon ion-md-list mr-2"></i> Source</a>
+  </li>
+  <li class="nav-item d-block d-sm-none">
+    <a class="nav-link {{ .activeTabMeta }}" href="/recipes/{{ .recipe.Name }}/meta"><i class="icon ion-md-information-circle-outline mr-2"></i> Meta</a>
+  </li>
+</ul>
+<div class="row flex-column-reverse flex-md-row">
+  <div class="col-md-9 ">
+    {{template "sub_content" .}}
+  </div>
+
+  <div class="col-md-3">
+
+    <div class="row d-none d-sm-block">
+<div class="col-12">
+  <strong>Installation</strong>
+
+    <pre class="clip">curl nopm.sh/{{ .recipe.Name }} | sh</pre>
+
+    <hr/>
+  </div>
+      {{template "recipe_meta" .}}
+      <hr/>
+
+    </div>
+
+
+  </div>
+
+
+
+</div>
+</div>
+
+
+
+
+
+
+{{end}}

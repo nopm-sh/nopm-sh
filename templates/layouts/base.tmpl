@@ -1,75 +1,109 @@
 <!doctype html>
 <html lang="en" class="h-100">
-  <head>
-    <!-- Required meta tags -->
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta name="author" content="Benjamin Jorand, and nopm-sh contributors">
+<head>
+  <!-- Required meta tags -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="author" content="Benjamin Jorand, and nopm-sh contributors">
 
-    <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="{{ .c.MustGet "staticBaseURL" }}/assets/bootstrap/dist/css/bootstrap.min.css">
-    <link href="{{ .c.MustGet "staticBaseURL" }}/static/css/nopm.css" rel="stylesheet">
-    <link href="{{ .c.MustGet "staticBaseURL" }}/assets/font-logos/assets/font-logos.css" rel="stylesheet">
-    <link href="https://unpkg.com/ionicons@4.5.10-0/dist/css/ionicons.min.css" rel="stylesheet">
+  <!-- Bootstrap CSS -->
+  <link rel="stylesheet" href="{{ .c.MustGet "staticBaseURL" }}/assets/bootstrap/dist/css/bootstrap.min.css">
+  <link href="{{ .c.MustGet "staticBaseURL" }}/static/css/nopm.css" rel="stylesheet">
+  <link href="{{ .c.MustGet "staticBaseURL" }}/assets/font-logos/assets/font-logos.css" rel="stylesheet">
+  <link href="https://unpkg.com/ionicons@4.5.10-0/dist/css/ionicons.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="{{ .c.MustGet "staticBaseURL" }}/assets/rainbow-code/themes/css/rainbow.css">
 
-
-    <title>nopm.sh {{ .title }}</title>
-  </head>
-  <body class="d-flex flex-column h-100">
-    <header class="mb-4">
+  <title>nopm.sh {{ .title }}</title>
+</head>
+<body class="d-flex flex-column h-100">
+  <header class="mb-4">
     <nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
-      <a class="navbar-brand" href="#">
-    <img src="{{ .c.MustGet "staticBaseURL" }}/static/img/logo.png" width="30" height="30" class="d-inline-block align-top" alt="logo">
-    nopm.sh
-  </a>
-  <!-- <a class="navbar-brand" href="#">Navbar</a> -->
-  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavAltMarkup" aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
-    <span class="navbar-toggler-icon"></span>
-  </button>
-  <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
-    <div class="navbar-nav">
-      <a class="nav-item nav-link {{ .activeNavIndex }}" href="/">Home <span class="sr-only">(current)</span></a>
-      <a class="nav-item nav-link {{ .activeNavRecipes }}" href="/recipes">Recipes</a>
-      <a class="nav-item nav-link {{ .activeNavDocs }}" href="/docs">Documentation</a>
-      <a class="nav-item nav-link {{ .activeNavSecurity }}" href="/security">Security</a>
-      <a class="nav-link" href="https://github.com/nopm-sh">Contribute</a>
-    </div>
-  </div>
-</nav>
-</header>
-    <!-- <nav class="navbar fixed-top navbar-light bg-light">
-      <a class="navbar-brand" href="#">
-    <img src="{{ .c.MustGet "staticBaseURL" }}/static/img/logo.png" width="30" height="30" class="d-inline-block align-top" alt="logo">
-    nopm.sh
-  </a>
+      <a class="navbar-brand" href="/">
+        <img src="{{ .c.MustGet "staticBaseURL" }}/static/img/logo.png" width="30" height="30" class="d-inline-block align-top" alt="logo">
+        nopm.sh
+      </a>
+      <!-- <a class="navbar-brand" href="#">Navbar</a> -->
+      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavAltMarkup" aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
+        <div class="navbar-nav">
+          <a class="nav-item nav-link {{ .activeNavIndex }}" href="/">Home <span class="sr-only">(current)</span></a>
+          <a class="nav-item nav-link {{ .activeNavRecipes }}" href="/recipes">Recipes</a>
+          <a class="nav-item nav-link {{ .activeNavDocs }}" href="/docs">Documentation</a>
+          <a class="nav-item nav-link {{ .activeNavSecurity }}" href="/security">Security</a>
+          <a class="nav-link" href="https://github.com/nopm-sh">Contribute</a>
+        </div>
+      </div>
+    </nav>
+  </header>
 
-
-
-</nav> -->
 <main role="main" class="flex-shrink-0">
 
-<div class="container-fluid">
-  {{template "content" .}}
+  <div class="container-fluid">
+    {{template "content" .}}
 
 
-</container>
+  </container>
 </main>
 <footer class="footer mt-auto py-3">
-<div class="container">
-  <span class="text-muted"><strong>nopm.sh</strong> is created by <a href="https://github.com/bjorand">Benjamin Jorand</a>.
-  </span>
-</div>
+  <div class="container">
+    <span class="text-muted"><strong>nopm.sh</strong> is created by <a href="https://github.com/bjorand">Benjamin Jorand</a>.
+    </span>
+  </div>
 </footer>
 
-    <!-- Optional JavaScript -->
-    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
-    <script src="{{ .c.MustGet "staticBaseURL" }}/assets/jquery/dist/jquery.slim.min.js"></script>
-    <script src="{{ .c.MustGet "staticBaseURL" }}/assets/popper.js/dist/umd/popper.min.js"></script>
-    <script src="{{ .c.MustGet "staticBaseURL" }}/assets/bootstrap/dist/js/bootstrap.min.js"></script>
-    <script type="text/javascript">
-      $(function () {
-        $('[data-toggle="tooltip"]').tooltip()
-      })
-    </script>
-  </body>
+<!-- Optional JavaScript -->
+<!-- jQuery first, then Popper.js, then Bootstrap JS -->
+<script src="{{ .c.MustGet "staticBaseURL" }}/assets/jquery/dist/jquery.slim.min.js"></script>
+<script src="{{ .c.MustGet "staticBaseURL" }}/assets/popper.js/dist/umd/popper.min.js"></script>
+<script src="{{ .c.MustGet "staticBaseURL" }}/assets/bootstrap/dist/js/bootstrap.min.js"></script>
+<script src="{{ .c.MustGet "staticBaseURL" }}/assets/rainbow-code/dist/rainbow.min.js"></script>
+<script src="{{ .c.MustGet "staticBaseURL" }}/assets/rainbow-code//src/language/generic.js"></script>
+<script src="{{ .c.MustGet "staticBaseURL" }}/assets/rainbow-code//src/language/shell.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/clipboard@2/dist/clipboard.min.js"></script>
+
+
+<script type="text/javascript">
+$(function () {
+  $('[data-toggle="tooltip"]').tooltip();
+  // $('#example').tooltip()
+
+  $('.clip').append('<a href="#" class="btn btn-dark btn-sm btn-clipboard" data-clipboard-target><i class="icon ion-md-copy"></i></a>')
+  $('[data-clipboard-target]')
+  .tooltip({
+    title: 'Copy to clipboard',
+    placement: 'top',
+    boundary: 'window',
+  });
+
+
+  var t = new ClipboardJS("[data-clipboard-target]", {
+    target: function(t) {
+      return t.parentNode
+    }
+  });
+  t.on("success", function(t) {
+    t.clearSelection()
+    $(t.trigger)
+    .attr('data-original-title', 'Copied!')
+    .tooltip('show')
+    .blur()
+    .attr('data-original-title', 'Copy to clipboard');
+
+
+  });
+  t.on("error", function(t) {
+    var e = /Mac/i.test(navigator.userAgent) ? "⌘" : "Ctrl-";
+    var n = "Press " + e + "C to copy";
+    $(t.trigger).attr("title", n).tooltip({ boundary: 'window' }).tooltip("show").attr("title", "Copy to clipboard").tooltip({ boundary: 'window' })
+  });
+
+
+
+
+
+})
+</script>
+</body>
 </html>

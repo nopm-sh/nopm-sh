@@ -1,0 +1,15 @@
+{{define "sub_content"}}
+
+<div class="row  d-block d-sm-none">
+  <div class="col-12">
+    <strong>Installation</strong>
+    <pre class="clip">curl nopm.sh/{{ .recipe.Name }} | sh</pre>
+    <hr/>
+  </div>
+</div>
+
+
+
+      {{ htmlSafe (.recipe.MD | renderMD) }}
+
+{{end}}

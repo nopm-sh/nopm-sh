@@ -19,7 +19,7 @@ nav {
 }
 
 .nav-link.active {
-  border-bottom-color: #28A745;
+  border-bottom-color: #51f777;
 }
 
 main > .container-fluid {
@@ -36,8 +36,8 @@ main > .container-fluid {
 }
 
 pre {
-  background-color: #3C3C3C;
-  color: white;
+  background-color: #e0e0e0;
+  color: black;
   padding: 1rem;
 }
 
@@ -49,10 +49,10 @@ blockquote{
   font-style:italic;
   color: #555555;
   padding:1.2em 30px 1.2em 75px;
-  border-left:.25rem solid #28A745 ;
+  border-left:.25rem solid #51f777;
   line-height:1.6;
   position: relative;
-  background:#EDEDED;
+    background:#f8f9fa!important;
 }
 
 blockquote::before{
@@ -77,3 +77,65 @@ blockquote span{
   font-weight: bold;
   margin-top:1em;
 }
+
+.nav {
+  font-weight: 700;
+  padding-bottom: 1px;
+  border-bottom: 3px solid #f8f9fa!important;
+
+  /* border-bottom: 3px solid #51f777; */
+}
+
+.nav-tabs .nav-link.active {
+  border-bottom: 3px solid #51f777;
+  margin-bottom: -3px;
+  color: rgba(0,0,0,.9);
+}
+
+.nav-tabs .nav-link {
+  color: rgba(0,0,0,.5);
+  border: 0px;
+}
+
+.nav-tabs .nav-link:hover,
+.nav-tabs .nav-link:focus {
+  /* background-color: #f8f9fa!important; */
+  margin-bottom: -3px;
+  border-bottom: 3px solid gray;
+}
+
+.btn-success {
+  background-color: #51f777;
+  border-color: #51f777;
+  /* font-weight: 700; */
+  color: black;
+}
+
+.btn-success:hover {
+  background-color: #51f710;
+  /* background-color: #f8f9fa!important; */
+  border-color: #51f777;
+
+  color: black;
+}
+
+
+/* copy  */
+pre {
+  position: relative;
+}
+pre > a {
+  padding: 2px 6px;
+  position: absolute;
+  right: 4px;
+  top: 4px;
+}
+/* div.highlight:hover .copybtn, div.highlight .copybtn:focus {
+    opacity: .3;
+}
+div.highlight .copybtn:hover {
+    opacity: 1;
+}
+div.highlight {
+    position: relative;
+} */

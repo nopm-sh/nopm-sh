@@ -13,7 +13,7 @@
 <tbody>
   {{ range .recipes }}
   <tr>
-    <th scope="row"><h3>{{ .Name }}<a href="/recipes/{{ .Name }}">{{ .Name }}</a></h3><small><a href="https://github.com/nopm-sh/recipes/blob/master/{{ .Name }}.sh">View recipe code</a></small>
+    <th scope="row"><h3><a href="/recipes/{{ .Name }}">{{ .Name }}</a></h3><small><a href="https://github.com/nopm-sh/recipes/blob/master/{{ .Name }}.sh">View recipe code</a></small>
       <br/>
       {{ range $os, $archs := .Compat }}
       <i class="{{ $os | compatIconName }}" data-toggle="tooltip" data-placement="top" title="{{ $os }} {{ range $arch := $archs }}{{$arch}}{{ end }}"></i>

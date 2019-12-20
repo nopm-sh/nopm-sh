@@ -1,0 +1,19 @@
+{{define "recipe_meta"}}
+
+
+  <div class="col-12 col-md-4 col-sm-3">
+    <strong>Compatibily</strong>
+    <br/>
+    {{ range $os, $archs := .recipe.Compat }}
+    <i class="{{ $os | compatIconName }}" data-toggle="tooltip" data-placement="top" title="{{ $os }} {{ range $arch := $archs }}{{$arch}}{{ end }}"></i>
+    {{ end }}
+  </div>
+  <div class="col-12 col-md-4 col-sm-3">
+    <strong>Installation size</strong><br/>
+    4 mB
+  </div>
+  <div class="col-12 col-sm-3">
+    <strong>Downloads</strong><br/>
+    44
+  </div>
+{{end}}

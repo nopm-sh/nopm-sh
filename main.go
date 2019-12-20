@@ -146,6 +146,10 @@ func isVersion(v string) bool {
 	return m.MatchString(v)
 }
 
+func (r *Recipe) CurlCmd() string {
+	return fmt.Sprintf("curl nopm.sh/%s | sh", r.Name)
+}
+
 func (r *Recipe) loadMoreMD() error {
 	data, err := ioutil.ReadFile(fmt.Sprintf("%s/%s.more.md", recipesDir, r.Name))
 	if err != nil {
@@ -403,10 +407,41 @@ func main() {
 			c.String(http.StatusInternalServerError, err.Error())
 			return
 		}
-		c.HTML(http.StatusOK, "recipe.tmpl", gin.H{
+		c.HTML(http.StatusOK, "recipe_readme.tmpl", gin.H{
 			"c":                c,
 			"activeNavRecipes": "active",
 			"recipe":           recipe,
+			"activeTabReadme":  "active",
+		})
+	})
+
+	router.GET("/recipes/:recipe/source", func(c *gin.Context) {
+		recipeQuery := ParseRecipeRawName(c.Param("recipe"))
+		recipe, err := recipeQuery.Get()
+		if err != nil {
+			c.String(http.StatusInternalServerError, err.Error())
+			return
+		}
+		c.HTML(http.StatusOK, "recipe_source.tmpl", gin.H{
+			"c":                c,
+			"activeNavRecipes": "active",
+			"recipe":           recipe,
+			"source":           string(recipe.Script),
+			"activeTabSource":  "active",
+		})
+	})
+	router.GET("/recipes/:recipe/meta", func(c *gin.Context) {
+		recipeQuery := ParseRecipeRawName(c.Param("recipe"))
+		recipe, err := recipeQuery.Get()
+		if err != nil {
+			c.String(http.StatusInternalServerError, err.Error())
+			return
+		}
+		c.HTML(http.StatusOK, "recipe_meta.tmpl", gin.H{
+			"c":                c,
+			"activeNavRecipes": "active",
+			"recipe":           recipe,
+			"activeTabMeta":    "active",
 		})
 	})
 	router.GET("/download_url/github.com/:owner/:repo/releases/:version/:os/:arch/:ext", func(c *gin.Context) {
