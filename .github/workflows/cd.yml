@@ -44,6 +44,10 @@ jobs:
       with:
         args: push nopmsh/nopm-sh
 
+    - name: Setup Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.x
     - name: GitHub Action for Yarn
       uses: Borales/actions-yarn@v2.1.0
       with:
