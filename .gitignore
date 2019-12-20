@@ -3,3 +3,4 @@ nopm-sh
 .DS_Store
 tmp
 *.log
+*.rdb

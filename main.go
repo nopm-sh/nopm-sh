@@ -8,10 +8,12 @@ import (
 	"html/template"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -23,6 +25,7 @@ import (
 	"github.com/google/go-github/v28/github"
 	"github.com/sirupsen/logrus"
 
+	"github.com/go-redis/redis/v7"
 	"golang.org/x/oauth2"
 )
 
@@ -34,6 +37,9 @@ var (
 	recipesDir    string
 	version       string
 	showVersion   bool
+	redisAddr     string
+	redisClient   *redis.Client
+	redisDB       int
 )
 
 type RecipeQuery struct {
@@ -43,11 +49,31 @@ type RecipeQuery struct {
 
 type Recipe struct {
 	Name    string
+	URL     *url.URL
 	Version string
 	Script  []byte
 	MoreMD  []byte
 	MD      []byte
 	Compat  map[string][]string
+}
+
+func (r *Recipe) URLNoScheme() string {
+	return strings.TrimPrefix(r.URL.String(), fmt.Sprintf("%s://", r.URL.Scheme))
+}
+
+func (r *Recipe) Hits() int {
+	s, err := redisClient.Get(fmt.Sprintf("%s_hits", r.Name)).Result()
+	if err != nil {
+		log.Error(err)
+		return 0
+	}
+	hits, err := strconv.Atoi(s)
+	if err != nil {
+		log.Error(err)
+		return 0
+	}
+	return hits
+
 }
 
 func GetFileContentType(out *os.File) (string, error) {
@@ -112,6 +138,16 @@ func (q *RecipeQuery) Get() (*Recipe, error) {
 			os := compatInput[0]
 			arch := compatInput[1]
 			r.Compat[os] = append(r.Compat[os], arch)
+			continue
+		}
+		if strings.HasPrefix(s, "# nopm:url ") {
+			rawURL := strings.TrimPrefix(s, "# nopm:url ")
+			u, err := url.Parse(rawURL)
+			if err != nil {
+				return nil, fmt.Errorf("Unable to parse meta URL: %s", s)
+			}
+			r.URL = u
+			continue
 		}
 	}
 	return r, nil
@@ -311,7 +347,12 @@ func formatAsDate(t time.Time) string {
 }
 
 func main() {
+
+	redisAddr = os.Getenv("REDIS_ADDR")
+
 	flag.StringVar(&listenAddr, "listen-addr", ":8080", "server listen address")
+	flag.StringVar(&redisAddr, "redis-addr", "", "Redis server address")
+	flag.IntVar(&redisDB, "redis-db", 0, "Redis database")
 	flag.StringVar(&staticBaseURL, "static-base-url", "", "static files base URL")
 	flag.StringVar(&templatesDir, "templates-dir", "./templates", "templates directory")
 	flag.StringVar(&recipesDir, "recipes-dir", "", "recipes directory")
@@ -331,6 +372,14 @@ func main() {
 		staticBaseURL = "./templates"
 	}
 
+	if redisAddr == "" {
+		redisAddr = os.Getenv("REDIS_ADDR")
+	}
+
+	if redisAddr == "" {
+		redisAddr = "localhost:6379"
+	}
+
 	if recipesDir == "" {
 		recipesDir = os.Getenv("RECIPES_DIR")
 	}
@@ -339,6 +388,12 @@ func main() {
 	if githubToken == "" {
 		log.Fatal("GITHUB_TOKEN environment variable empty")
 	}
+
+	redisClient = redis.NewClient(&redis.Options{
+		Addr:     redisAddr,
+		Password: "",
+		DB:       redisDB,
+	})
 	//
 	// router := http.NewServeMux()
 	// router.Handle("/", responseLogger(indexHandler()))
@@ -541,6 +596,7 @@ func main() {
 					c.String(http.StatusFound, "Recipe exists")
 					return
 				}
+				redisClient.Incr(fmt.Sprintf("%s_hits", recipe.Name))
 				render, err := recipe.Render()
 				if err != nil {
 					c.String(http.StatusBadRequest, err.Error())
@@ -564,7 +620,6 @@ func main() {
 				results = append(results, recipe.Name)
 			}
 		}
-
 		c.String(http.StatusOK, strings.Join(results, "\n"))
 	})
 
@@ -582,37 +637,6 @@ func main() {
 		}
 		c.Data(http.StatusOK, "text/plain; charset=utf-8", recipe.MoreMD)
 	})
-	// router.GET("/:eroute", func(c *gin.Context) {
-	// 	c.String(http.StatusOK, c.Param("route"))
-	// })
-	// router.GET("/terraform/toto", func(c *gin.Context) {
-	// 	c.String(http.StatusOK, c.Param("route"))
-	// })
-	//
-	// router.GET("/:recipeRawName", func(c *gin.Context) {
-	//
-	// 	c.String(http.StatusOK, c.Param("recipeRawName"))
-	// 	return
-	// 	// fmt.Println("coucou", c.Param("recipeRawName"))
-	// 	// if c.Param("recipeRawName") == "_" {
-	// 	// 	c.String(http.StatusOK, "cool")
-	// 	// 	return
-	// 	// }
-	// 	// recipeRawName := c.Param("recipeRawName")
-	// 	//
-	// 	// recipeQuery := ParseRecipeRawName(recipeRawName)
-	// 	// recipe, err := recipeQuery.Get()
-	// 	// if err != nil {
-	// 	// 	c.String(http.StatusNotFound, "Recipe not found")
-	// 	// 	return
-	// 	// }
-	// 	// render, err := recipe.Render()
-	// 	// if err != nil {
-	// 	// 	c.String(http.StatusBadRequest, err.Error())
-	// 	// 	return
-	// 	// }
-	// 	// c.String(http.StatusOK, string(render))
-	// })
 
 	router.Run(listenAddr)
 }

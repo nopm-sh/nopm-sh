@@ -2,6 +2,11 @@
 
 
   <div class="col-12 col-md-4 col-sm-3">
+    {{ if .recipe.URL }}
+    <strong>Homepage</strong>
+    <a href="">{{.recipe.URLNoScheme }}</a>
+    <br/>
+    {{ end }}
     <strong>Compatibily</strong>
     <br/>
     {{ range $os, $archs := .recipe.Compat }}
@@ -14,6 +19,6 @@
   </div>
   <div class="col-12 col-sm-3">
     <strong>Downloads</strong><br/>
-    44
+    {{.recipe.Hits}}
   </div>
 {{end}}
