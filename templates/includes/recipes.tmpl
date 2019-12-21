@@ -1,6 +1,8 @@
 {{define "content"}}
 
-<h1 class="cover-heading">Recipes</h1>
+Search
+
+<h1 class="cover-heading">{{ len .recipes }} recipe{{ (len .recipes) | plural }}</h1>
 
 <table class="table">
   <!-- <thead class="thead-dark">
@@ -13,15 +15,21 @@
 <tbody>
   {{ range .recipes }}
   <tr>
-    <th scope="row"><h3><a href="/recipes/{{ .Name }}">{{ .Name }}</a></h3><small><a href="https://github.com/nopm-sh/recipes/blob/master/{{ .Name }}.sh">View recipe code</a></small>
-      <br/>
+    <th scope="row"><h3><a href="/recipes/{{ .Name }}">{{ .Name }}</a></h3>
+      <p>{{.Name}} installer</p>
       {{ range $os, $archs := .Compat }}
       <i class="{{ $os | compatIconName }}" data-toggle="tooltip" data-placement="top" title="{{ $os }} {{ range $arch := $archs }}{{$arch}}{{ end }}"></i>
       {{ end }}
+
+      {{ range $tag := .Tags }}
+      <span class="badge badge-secondary">{{ $tag }}</span>
+      {{ end }}
     </th>
     <td>
-      <pre>curl nopm.sh/{{ .Name }} | sh</pre>
-
+      <pre class="clip">curl nopm.sh/{{ .Name }} | sh</pre>
+      <div class="fixed-bottom position-relative">
+<small>{{ .Hits}} download{{ .Hits | plural }}</small>
+</div>
 
   </td>
   <td></td>

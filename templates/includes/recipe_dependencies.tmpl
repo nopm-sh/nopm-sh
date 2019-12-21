@@ -1,5 +1,16 @@
 {{define "sub_content"}}
 
+{{ if gt (len .recipe.RemoteScripts) 0 }}
+<strong>Remote scripts in used</strong>
+<ul>
+  {{ range $s := .recipe.RemoteScripts }}
+  <li><a href="{{ $s }}">{{ $s }}</a></li>
+  {{ end }}
+</ul>
+{{ end }}
+
+{{ if gt (len .recipe.Depends) 0 }}
+<strong>Dependencies</strong>
 <ul>
   {{ range $name, $d := .recipe.Depends}}
   <li>
@@ -8,3 +19,4 @@
   {{ end }}
 </ul>
 {{end}}
+{{ end }}

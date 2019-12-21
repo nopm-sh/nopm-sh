@@ -1,7 +1,7 @@
 {{define "recipe_meta"}}
 
 
-  <div class="col-12 col-md-4 col-sm-3">
+  <div class="col-12 col-md-3 col-sm-3">
     {{ if .recipe.URL }}
     <strong>Homepage</strong>
     <a href="">{{.recipe.URLNoScheme }}</a>
@@ -13,11 +13,16 @@
     <i class="{{ $os | compatIconName }}" data-toggle="tooltip" data-placement="top" title="{{ $os }} {{ range $arch := $archs }}{{$arch}}{{ end }}"></i>
     {{ end }}
   </div>
-  <div class="col-12 col-md-4 col-sm-3">
+  <div class="col-12 col-md-3 col-sm-3">
+    <strong>Github</strong><br/>
+    <a href="https://github.com/nopm-sh/recipes/blob/master/{{ .recipe.Name}}.sh">Source</a>
+    <a href="https://github.com/nopm-sh/recipes/commits/master/{{ .recipe.Name}}.sh">Changelog</a>
+  </div>
+  <div class="col-12 col-md-3 col-sm-3">
     <strong>Installation size</strong><br/>
     4 mB
   </div>
-  <div class="col-12 col-sm-3">
+  <div class="col-12 col-md-3 col-sm-3">
     <strong>Downloads</strong><br/>
     {{.recipe.Hits}}
   </div>
