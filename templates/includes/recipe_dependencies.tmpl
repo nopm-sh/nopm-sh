@@ -1,0 +1,10 @@
+{{define "sub_content"}}
+
+<ul>
+  {{ range $name, $d := .recipe.Depends}}
+  <li>
+    <a href="/recipes/{{ $name }}">{{ $name }}</a>
+  </li>
+  {{ end }}
+</ul>
+{{end}}

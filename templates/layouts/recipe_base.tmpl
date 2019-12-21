@@ -1,6 +1,11 @@
 {{define "content"}}
 
-<h2 class="cover-heading">{{ .recipe.Name }} <small>0.0.4</small></h2>
+<h2 class="cover-heading">
+  {{ if .recipe.Draft }}
+<span class="badge badge-warning">draft</span>
+{{ end }}
+  {{ .recipe.Name }} <small>0.0.4</small>
+</h2>
 
 
 
@@ -9,7 +14,10 @@
     <a class="nav-link {{ .activeTabReadme }}" href="/recipes/{{ .recipe.Name }}"><i class="icon ion-md-book mr-2"></i> Readme</a>
   </li>
   <li class="nav-item">
-    <a class="nav-link {{ .activeTabSource }}" href="/recipes/{{ .recipe.Name }}/source"><i class="icon ion-md-list mr-2"></i> Source</a>
+    <a class="nav-link {{ .activeTabSource }}" href="/recipes/{{ .recipe.Name }}/source"><i class="icon ion-md-code mr-2"></i> Source</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {{ .activeTabDependencies }} {{ if not .recipe.Depends }}disabled{{ end }}" href="/recipes/{{ .recipe.Name }}/dependencies"><i class="icon ion-md-cube mr-2"></i>  {{ len .recipe.Depends }} Dependenc{{ if eq (len .recipe.Depends) 1 }}y{{else}}ies{{end}}</a>
   </li>
   <li class="nav-item d-block d-sm-none">
     <a class="nav-link {{ .activeTabMeta }}" href="/recipes/{{ .recipe.Name }}/meta"><i class="icon ion-md-information-circle-outline mr-2"></i> Meta</a>

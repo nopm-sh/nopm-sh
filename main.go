@@ -1,24 +1,18 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"flag"
 	"fmt"
 	"html/template"
-	"io/ioutil"
 	"net/http"
-	"net/url"
 	"os"
-	"path"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
-	"github.com/microcosm-cc/bluemonday"
-	"gopkg.in/russross/blackfriday.v2"
+	"github.com/nopm-sh/nopm-sh/core"
 
 	"github.com/gin-contrib/multitemplate"
 	"github.com/gin-gonic/gin"
@@ -40,64 +34,8 @@ var (
 	redisAddr     string
 	redisClient   *redis.Client
 	redisDB       int
+	recipesEngine *core.RecipeEngine
 )
-
-type RecipeQuery struct {
-	Name    string
-	Version string
-}
-
-type Recipe struct {
-	Name    string
-	URL     *url.URL
-	Version string
-	Script  []byte
-	MoreMD  []byte
-	MD      []byte
-	Compat  map[string][]string
-}
-
-func (r *Recipe) URLNoScheme() string {
-	return strings.TrimPrefix(r.URL.String(), fmt.Sprintf("%s://", r.URL.Scheme))
-}
-
-func (r *Recipe) Hits() int {
-	s, err := redisClient.Get(fmt.Sprintf("%s_hits", r.Name)).Result()
-	if err != nil {
-		log.Error(err)
-		return 0
-	}
-	hits, err := strconv.Atoi(s)
-	if err != nil {
-		log.Error(err)
-		return 0
-	}
-	return hits
-
-}
-
-func GetFileContentType(out *os.File) (string, error) {
-
-	// Only the first 512 bytes are used to sniff the content type.
-	buffer := make([]byte, 512)
-
-	_, err := out.Read(buffer)
-	if err != nil {
-		return "", err
-	}
-
-	// Use the net/http package's handy DectectContentType function. Always returns a valid
-	// content-type by returning "application/octet-stream" if no others seemed to match.
-	contentType := http.DetectContentType(buffer)
-
-	return contentType, nil
-}
-
-func renderMD(input []byte) string {
-	unsafe := blackfriday.Run(input)
-	html := bluemonday.UGCPolicy().SanitizeBytes(unsafe)
-	return string(html)
-}
 
 func compatIconName(os string) string {
 	switch os {
@@ -109,198 +47,6 @@ func compatIconName(os string) string {
 		return ""
 	}
 }
-
-func (q *RecipeQuery) Get() (*Recipe, error) {
-	r := &Recipe{
-		Name:    q.Name,
-		Version: q.Version,
-	}
-	// TODO need security here
-	data, err := ioutil.ReadFile(fmt.Sprintf("%s/%s.sh", recipesDir, r.Name))
-	if err != nil {
-		return nil, err
-	}
-	r.Script = data
-	r.Compat = make(map[string][]string)
-	r.loadMD()
-	r.loadMoreMD()
-
-	scanner := bufio.NewScanner(strings.NewReader(string(r.Script)))
-	scanner.Split(bufio.ScanLines)
-	for scanner.Scan() {
-		s := scanner.Text()
-		if strings.HasPrefix(s, "# nopm:compat ") {
-			_s := strings.TrimPrefix(s, "# nopm:compat ")
-			compatInput := strings.Split(_s, " ")
-			if len(compatInput) != 2 {
-				return nil, fmt.Errorf("Unable to parse meta: %s", s)
-			}
-			os := compatInput[0]
-			arch := compatInput[1]
-			r.Compat[os] = append(r.Compat[os], arch)
-			continue
-		}
-		if strings.HasPrefix(s, "# nopm:url ") {
-			rawURL := strings.TrimPrefix(s, "# nopm:url ")
-			u, err := url.Parse(rawURL)
-			if err != nil {
-				return nil, fmt.Errorf("Unable to parse meta URL: %s", s)
-			}
-			r.URL = u
-			continue
-		}
-	}
-	return r, nil
-}
-
-func All() ([]*Recipe, error) {
-	recipesFilenames, err := filepath.Glob(fmt.Sprintf("%s/*.sh", recipesDir))
-	if err != nil {
-		return nil, err
-	}
-	var recipes []*Recipe
-	for _, recipeFilename := range recipesFilenames {
-		recipeFilename = strings.TrimSuffix(recipeFilename, path.Ext(recipeFilename))
-		recipeNameSlice := strings.Split(recipeFilename, "/")
-		recipeName := recipeNameSlice[len(recipeNameSlice)-1]
-		q := &RecipeQuery{
-			Name: recipeName,
-		}
-		r, err := q.Get()
-		if err != nil {
-			log.Errorf("Unable to get recipe %s: %+v", recipeFilename, err)
-			continue
-		}
-
-		recipes = append(recipes, r)
-	}
-	return recipes, nil
-}
-
-func isVersion(v string) bool {
-	m := regexp.MustCompile(`^([0-9]+\.)*[0-9]*$`)
-	return m.MatchString(v)
-}
-
-func (r *Recipe) CurlCmd() string {
-	return fmt.Sprintf("curl nopm.sh/%s | sh", r.Name)
-}
-
-func (r *Recipe) loadMoreMD() error {
-	data, err := ioutil.ReadFile(fmt.Sprintf("%s/%s.more.md", recipesDir, r.Name))
-	if err != nil {
-		return err
-	}
-	r.MoreMD = data
-	return nil
-}
-
-func (r *Recipe) loadMD() error {
-	data, err := ioutil.ReadFile(fmt.Sprintf("/Users/meister/recipes/%s.md", r.Name))
-	if err != nil {
-		return err
-	}
-	r.MD = data
-	return nil
-}
-
-func (r *Recipe) Render() ([]byte, error) {
-	var script string
-	var substVars []string
-	scanner := bufio.NewScanner(strings.NewReader(string(r.Script)))
-	scanner.Split(bufio.ScanLines)
-	for scanner.Scan() {
-		s := scanner.Text()
-
-		if strings.HasPrefix(s, "# nopm:subst ") {
-			_s := strings.TrimPrefix(s, "# nopm:subst ")
-			newArg := strings.TrimSpace(_s)
-			substVars = append(substVars, newArg)
-		}
-
-		for _, substVar := range substVars {
-			if strings.HasPrefix(s, fmt.Sprintf("%s=\"\"", substVar)) {
-				switch substVar {
-				case "version":
-					if !isVersion(r.Version) {
-						return nil, fmt.Errorf("Unable to validate version")
-					}
-					s = fmt.Sprintf("%s=\"%s\"", substVar, r.Version)
-				}
-			}
-		}
-
-		script = script + s + "\n"
-	}
-
-	return []byte(script), nil
-}
-
-func ParseRecipeRawName(input string) *RecipeQuery {
-	rawName := strings.Split(input, "@")
-	name := rawName[0]
-	version := ""
-	if len(rawName) == 2 {
-		version = rawName[1]
-	}
-	return &RecipeQuery{
-		Name:    name,
-		Version: version,
-	}
-}
-
-// func indexHandler() http.Handler {
-// 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-// 		// defer func() {
-// 		// 	log.WithFields(logrus.Fields{
-// 		// 		"method":      r.Method,
-// 		// 		"remote_addr": r.RemoteAddr,
-// 		// 		"user_agent":  r.UserAgent(),
-// 		// 	}).Info(r.URL.RequestURI())
-// 		// }()
-// 		recipeQuery := ParseRecipeURL(r.URL)
-// 		recipe, err := recipeQuery.Get()
-// 		if err != nil {
-// 			http.Error(w, "No such recipe", http.StatusNotFound)
-// 			return
-// 		}
-// 		render, err := recipe.Render()
-// 		if err != nil {
-// 			http.Error(w, err.Error(), http.StatusBadRequest)
-// 			return
-// 		}
-// 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-// 		w.Write(render)
-// 	})
-// }
-//
-// func tracing() func(http.Handler) http.Handler {
-// 	return func(next http.Handler) http.Handler {
-// 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-// 			next.ServeHTTP(w, r)
-//
-// 		})
-// 	}
-// }
-//
-// func logging() func(http.Handler) http.Handler {
-// 	return func(next http.Handler) http.Handler {
-// 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-// 			log.WithFields(logrus.Fields{
-// 				"method":      r.Method,
-// 				"remote_addr": r.RemoteAddr,
-// 				"user_agent":  r.UserAgent(),
-// 			}).Info(r.URL.RequestURI())
-// 			next.ServeHTTP(w, r)
-// 		})
-// 	}
-// }
-//
-// type loggingResponseWriter struct {
-// 	status int
-// 	body   string
-// 	http.ResponseWriter
-// }
 
 func Base() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -327,10 +73,16 @@ func loadTemplates(dir string) multitemplate.Renderer {
 		copy(layoutCopy, layouts)
 		files := append(layoutCopy, include)
 		r.AddFromFilesFuncs(filepath.Base(include), template.FuncMap{
-			"renderMD":       renderMD,
+			"renderMD":       core.RenderMD,
 			"compatIconName": compatIconName,
 			"capitalize": func(s string) string {
 				return strings.Title(s)
+			},
+			"plural": func(i int) string {
+				if i == 0 || i > 1 {
+					return "s"
+				}
+				return ""
 			},
 			"htmlSafe": func(html string) template.HTML {
 				return template.HTML(html)
@@ -394,23 +146,8 @@ func main() {
 		Password: "",
 		DB:       redisDB,
 	})
-	//
-	// router := http.NewServeMux()
-	// router.Handle("/", responseLogger(indexHandler()))
-	//
-	// // http.HandleFunc("/", indexHandler)
-	// server := &http.Server{
-	// 	Addr:    listenAddr,
-	// 	Handler: tracing()(logging()(router)),
-	// 	// ErrorLog:     logger,
-	// 	ReadTimeout:  5 * time.Second,
-	// 	WriteTimeout: 10 * time.Second,
-	// 	IdleTimeout:  15 * time.Second,
-	// }
-	//
-	// if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-	// 	log.Fatalf("Could not listen on %s: %v\n", listenAddr, err)
-	// }
+
+	recipesEngine = core.NewRecipeEngine(redisClient, recipesDir)
 
 	router := gin.Default()
 	router.Use(gin.Recovery())
@@ -444,7 +181,7 @@ func main() {
 		})
 	})
 	router.GET("/recipes", func(c *gin.Context) {
-		recipes, err := All()
+		recipes, err := recipesEngine.All()
 		if err != nil {
 			c.String(http.StatusInternalServerError, err.Error())
 			return
@@ -456,7 +193,7 @@ func main() {
 		})
 	})
 	router.GET("/recipes/:recipe", func(c *gin.Context) {
-		recipeQuery := ParseRecipeRawName(c.Param("recipe"))
+		recipeQuery := recipesEngine.ParseRecipeRawName(c.Param("recipe"))
 		recipe, err := recipeQuery.Get()
 		if err != nil {
 			c.String(http.StatusInternalServerError, err.Error())
@@ -471,7 +208,7 @@ func main() {
 	})
 
 	router.GET("/recipes/:recipe/source", func(c *gin.Context) {
-		recipeQuery := ParseRecipeRawName(c.Param("recipe"))
+		recipeQuery := recipesEngine.ParseRecipeRawName(c.Param("recipe"))
 		recipe, err := recipeQuery.Get()
 		if err != nil {
 			c.String(http.StatusInternalServerError, err.Error())
@@ -486,7 +223,7 @@ func main() {
 		})
 	})
 	router.GET("/recipes/:recipe/meta", func(c *gin.Context) {
-		recipeQuery := ParseRecipeRawName(c.Param("recipe"))
+		recipeQuery := recipesEngine.ParseRecipeRawName(c.Param("recipe"))
 		recipe, err := recipeQuery.Get()
 		if err != nil {
 			c.String(http.StatusInternalServerError, err.Error())
@@ -497,6 +234,20 @@ func main() {
 			"activeNavRecipes": "active",
 			"recipe":           recipe,
 			"activeTabMeta":    "active",
+		})
+	})
+	router.GET("/recipes/:recipe/dependencies", func(c *gin.Context) {
+		recipeQuery := recipesEngine.ParseRecipeRawName(c.Param("recipe"))
+		recipe, err := recipeQuery.Get()
+		if err != nil {
+			c.String(http.StatusInternalServerError, err.Error())
+			return
+		}
+		c.HTML(http.StatusOK, "recipe_dependencies.tmpl", gin.H{
+			"c":                     c,
+			"recipe":                recipe,
+			"activeNavRecipes":      "active",
+			"activeTabDependencies": "active",
 		})
 	})
 	router.GET("/download_url/github.com/:owner/:repo/releases/:version/:os/:arch/:ext", func(c *gin.Context) {
@@ -572,7 +323,7 @@ func main() {
 		case "HEAD":
 			recipeRawNameMatch := recipeRegexp.FindStringSubmatch(path)
 			if len(recipeRawNameMatch) == 2 {
-				recipeQuery := ParseRecipeRawName(recipeRawNameMatch[1])
+				recipeQuery := recipesEngine.ParseRecipeRawName(recipeRawNameMatch[1])
 				_, err := recipeQuery.Get()
 				if err != nil {
 					c.String(http.StatusNotFound, "Recipe not found")
@@ -586,7 +337,7 @@ func main() {
 		case "GET":
 			recipeRawNameMatch := recipeRegexp.FindStringSubmatch(path)
 			if len(recipeRawNameMatch) == 2 {
-				recipeQuery := ParseRecipeRawName(recipeRawNameMatch[1])
+				recipeQuery := recipesEngine.ParseRecipeRawName(recipeRawNameMatch[1])
 				recipe, err := recipeQuery.Get()
 				if err != nil {
 					c.String(http.StatusNotFound, "Recipe not found")
@@ -607,25 +358,20 @@ func main() {
 		}
 
 	})
+
 	router.GET("/search/:input", func(c *gin.Context) {
 		input := strings.ToLower(c.Param("input"))
-		recipes, err := All()
+		results, err := recipesEngine.Search(input)
 		if err != nil {
 			c.String(http.StatusInternalServerError, err.Error())
 			return
-		}
-		var results []string
-		for _, recipe := range recipes {
-			if strings.Contains(strings.ToLower(recipe.Name), input) {
-				results = append(results, recipe.Name)
-			}
 		}
 		c.String(http.StatusOK, strings.Join(results, "\n"))
 	})
 
 	router.GET("/md/:recipeName/more", func(c *gin.Context) {
 		recipeName := c.Param("recipeName")
-		recipeQuery := ParseRecipeRawName(recipeName)
+		recipeQuery := recipesEngine.ParseRecipeRawName(recipeName)
 		recipe, err := recipeQuery.Get()
 		if err != nil {
 			c.String(http.StatusNotFound, "Recipe not found")
