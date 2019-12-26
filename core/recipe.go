@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/nopm-sh/nopm-sh/providers"
 	"github.com/sirupsen/logrus"
 
 	"github.com/go-redis/redis/v7"
@@ -20,14 +21,16 @@ var (
 )
 
 type RecipeEngine struct {
-	redisClient *redis.Client
+	RedisClient *redis.Client
 	recipesDir  string
+	Cache       *Cache
 }
 
 func NewRecipeEngine(redisClient *redis.Client, recipesDir string) *RecipeEngine {
 	return &RecipeEngine{
-		redisClient: redisClient,
+		RedisClient: redisClient,
 		recipesDir:  recipesDir,
+		Cache:       NewCache(redisClient),
 	}
 }
 
@@ -58,7 +61,7 @@ func (r *Recipe) URLNoScheme() string {
 }
 
 func (r *Recipe) Hits() int {
-	s, err := r.e.redisClient.Get(fmt.Sprintf("%s_hits", r.Name)).Result()
+	s, err := r.e.RedisClient.Get(fmt.Sprintf("%s_hits", r.Name)).Result()
 	if err != nil {
 		log.Error(err)
 		return 0
@@ -268,4 +271,49 @@ func (e *RecipeEngine) Search(input string) ([]string, error) {
 	}
 	return results, nil
 
+}
+
+func (e *RecipeEngine) HashicorpReleaseLatestVersion(name string) (string, error) {
+	r, err := e.HashicorpRelease(name)
+	if err != nil {
+		return "", err
+	}
+	l, err := r.LatestVersion()
+	if err != nil {
+		return "", err
+	}
+	return l.Version, nil
+}
+
+func (e *RecipeEngine) HashicorpReleaseBuild(name string, version string, os string, arch string) (*providers.HashicorpReleaseBuild, error) {
+	r, err := e.HashicorpRelease(name)
+	if err != nil {
+		return nil, err
+	}
+	b, err := r.GetBuild(version, os, arch)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
+func (e *RecipeEngine) HashicorpRelease(name string) (*providers.HashicorpRelease, error) {
+	var r *providers.HashicorpRelease
+
+	err := e.Cache.Get(&r, "HashicorpReleases", name)
+	if err != nil {
+		return nil, err
+	}
+	if r == nil {
+		r, err = providers.HashicorpReleasesGet("terraform")
+		if err != nil {
+			return nil, err
+		}
+		err := e.Cache.Set(r, "HashicorpReleases", name)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return r, nil
 }

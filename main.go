@@ -30,6 +30,7 @@ var (
 	templatesDir  string
 	recipesDir    string
 	version       string
+	githubToken   string
 	showVersion   bool
 	redisAddr     string
 	redisClient   *redis.Client
@@ -98,89 +99,77 @@ func formatAsDate(t time.Time) string {
 	return fmt.Sprintf("%d%02d/%02d", year, month, day)
 }
 
-func main() {
-
-	redisAddr = os.Getenv("REDIS_ADDR")
-
-	flag.StringVar(&listenAddr, "listen-addr", ":8080", "server listen address")
-	flag.StringVar(&redisAddr, "redis-addr", "", "Redis server address")
-	flag.IntVar(&redisDB, "redis-db", 0, "Redis database")
-	flag.StringVar(&staticBaseURL, "static-base-url", "", "static files base URL")
-	flag.StringVar(&templatesDir, "templates-dir", "./templates", "templates directory")
-	flag.StringVar(&recipesDir, "recipes-dir", "", "recipes directory")
-	flag.BoolVar(&showVersion, "version", false, "show version")
-	flag.Parse()
-
-	if showVersion {
-		fmt.Printf("nopm-sh version %s", version)
-		os.Exit(0)
-	}
-
-	if staticBaseURL == "" {
-		staticBaseURL = os.Getenv("STATIC_BASE_URL")
-	}
-
-	if staticBaseURL == "" {
-		staticBaseURL = "./templates"
-	}
-
-	if redisAddr == "" {
-		redisAddr = os.Getenv("REDIS_ADDR")
-	}
-
-	if redisAddr == "" {
-		redisAddr = "localhost:6379"
-	}
-
-	if recipesDir == "" {
-		recipesDir = os.Getenv("RECIPES_DIR")
-	}
-
-	githubToken := os.Getenv("GITHUB_TOKEN")
-	if githubToken == "" {
-		log.Fatal("GITHUB_TOKEN environment variable empty")
-	}
-
-	redisClient = redis.NewClient(&redis.Options{
-		Addr:     redisAddr,
-		Password: "",
-		DB:       redisDB,
-	})
-
-	recipesEngine = core.NewRecipeEngine(redisClient, recipesDir)
-
-	router := gin.Default()
-	router.Use(gin.Recovery())
-	router.Use(Base())
-
+func setupRouter() *gin.Engine {
 	recipeRegexp, err := regexp.Compile("^/([^/]+)$")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	router.HTMLRender = loadTemplates(templatesDir)
-	router.GET("/", func(c *gin.Context) {
+	r := gin.Default()
+
+	r.Use(gin.Recovery())
+	r.Use(Base())
+
+	r.HTMLRender = loadTemplates(templatesDir)
+
+	r.GET("/ping", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"version": version})
+	})
+
+	r.GET("/_/providers/hashicorp/latest_version/:name", func(c *gin.Context) {
+		name := strings.ToLower(c.Param("name"))
+
+		r, err := recipesEngine.HashicorpRelease(name)
+		if err != nil {
+			c.String(http.StatusNotFound, err.Error())
+			return
+		}
+		v, err := r.LatestVersion()
+		if err != nil {
+			c.String(http.StatusNotFound, err.Error())
+			return
+		}
+		c.String(http.StatusOK, v.Version)
+	})
+	r.GET("/_/providers/hashicorp/release_url/:name/:version/:os/:arch", func(c *gin.Context) {
+		arch := strings.ToLower(c.Param("arch"))
+		os := strings.ToLower(c.Param("os"))
+		version := strings.ToLower(c.Param("version"))
+		name := strings.ToLower(c.Param("name"))
+
+		r, err := recipesEngine.HashicorpRelease(name)
+		if err != nil {
+			c.String(http.StatusNotFound, err.Error())
+			return
+		}
+		b, err := r.GetBuild(version, os, arch)
+		if err != nil {
+			c.String(http.StatusNotFound, err.Error())
+			return
+		}
+		c.String(http.StatusOK, b.URL)
+	})
+
+	r.GET("/", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "index.tmpl", gin.H{
 			"c":              c,
 			"activeNavIndex": "active",
 		})
 	})
-	router.GET("/ping", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"version": version})
-	})
-	router.GET("/docs", func(c *gin.Context) {
+
+	r.GET("/docs", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "docs.tmpl", gin.H{
 			"c":             c,
 			"activeNavDocs": "active",
 		})
 	})
-	router.GET("/security", func(c *gin.Context) {
+	r.GET("/security", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "security.tmpl", gin.H{
 			"c":                 c,
 			"activeNavSecurity": "active",
 		})
 	})
-	router.GET("/recipes", func(c *gin.Context) {
+	r.GET("/recipes", func(c *gin.Context) {
 		recipes, err := recipesEngine.All()
 		if err != nil {
 			c.String(http.StatusInternalServerError, err.Error())
@@ -192,7 +181,7 @@ func main() {
 			"recipes":          recipes,
 		})
 	})
-	router.GET("/recipes/:recipe", func(c *gin.Context) {
+	r.GET("/recipes/:recipe", func(c *gin.Context) {
 		recipeQuery := recipesEngine.ParseRecipeRawName(c.Param("recipe"))
 		recipe, err := recipeQuery.Get()
 		if err != nil {
@@ -207,7 +196,7 @@ func main() {
 		})
 	})
 
-	router.GET("/recipes/:recipe/source", func(c *gin.Context) {
+	r.GET("/recipes/:recipe/source", func(c *gin.Context) {
 		recipeQuery := recipesEngine.ParseRecipeRawName(c.Param("recipe"))
 		recipe, err := recipeQuery.Get()
 		if err != nil {
@@ -222,7 +211,7 @@ func main() {
 			"activeTabSource":  "active",
 		})
 	})
-	router.GET("/recipes/:recipe/meta", func(c *gin.Context) {
+	r.GET("/recipes/:recipe/meta", func(c *gin.Context) {
 		recipeQuery := recipesEngine.ParseRecipeRawName(c.Param("recipe"))
 		recipe, err := recipeQuery.Get()
 		if err != nil {
@@ -236,7 +225,7 @@ func main() {
 			"activeTabMeta":    "active",
 		})
 	})
-	router.GET("/recipes/:recipe/dependencies", func(c *gin.Context) {
+	r.GET("/recipes/:recipe/dependencies", func(c *gin.Context) {
 		recipeQuery := recipesEngine.ParseRecipeRawName(c.Param("recipe"))
 		recipe, err := recipeQuery.Get()
 		if err != nil {
@@ -250,16 +239,17 @@ func main() {
 			"activeTabDependencies": "active",
 		})
 	})
-	router.GET("/download_url/github.com/:owner/:repo/releases/:version/:os/:arch/:ext", func(c *gin.Context) {
+
+	r.GET("/download_url/github.com/:owner/:repo/releases/:version/:os/:arch/:ext", func(c *gin.Context) {
 		owner := c.Param("owner")
 		redirect := c.Query("redirect")
 		repo := c.Param("repo")
 		arch := strings.ToLower(c.Param("arch"))
 		os := strings.ToLower(c.Param("os"))
 		ext := strings.ToLower(c.Param("ext"))
-		// os := c.Param("repo")
-		// ext := c.Param("ext")
-		ctx := context.Background()
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
 		ts := oauth2.StaticTokenSource(
 			&oauth2.Token{AccessToken: githubToken},
 		)
@@ -316,7 +306,32 @@ func main() {
 		}
 
 	})
-	router.NoRoute(func(c *gin.Context) {
+
+	r.GET("/search/:input", func(c *gin.Context) {
+		input := strings.ToLower(c.Param("input"))
+		results, err := recipesEngine.Search(input)
+		if err != nil {
+			c.String(http.StatusInternalServerError, err.Error())
+			return
+		}
+		c.String(http.StatusOK, strings.Join(results, "\n"))
+	})
+
+	r.GET("/md/:recipeName/more", func(c *gin.Context) {
+		recipeName := c.Param("recipeName")
+		recipeQuery := recipesEngine.ParseRecipeRawName(recipeName)
+		recipe, err := recipeQuery.Get()
+		if err != nil {
+			c.String(http.StatusNotFound, "Recipe not found")
+			return
+		}
+		if recipe.MoreMD == nil {
+			c.String(http.StatusNotFound, "Recipe additional documentation not found")
+			return
+		}
+		c.Data(http.StatusOK, "text/plain; charset=utf-8", recipe.MoreMD)
+	})
+	r.NoRoute(func(c *gin.Context) {
 		path := c.Request.URL.Path
 		method := c.Request.Method
 		switch method {
@@ -358,31 +373,62 @@ func main() {
 		}
 
 	})
+	return r
+}
 
-	router.GET("/search/:input", func(c *gin.Context) {
-		input := strings.ToLower(c.Param("input"))
-		results, err := recipesEngine.Search(input)
-		if err != nil {
-			c.String(http.StatusInternalServerError, err.Error())
-			return
-		}
-		c.String(http.StatusOK, strings.Join(results, "\n"))
+func main() {
+
+	redisAddr = os.Getenv("REDIS_ADDR")
+
+	flag.StringVar(&listenAddr, "listen-addr", ":8080", "server listen address")
+	flag.StringVar(&redisAddr, "redis-addr", "", "Redis server address")
+	flag.IntVar(&redisDB, "redis-db", 0, "Redis database")
+	flag.StringVar(&staticBaseURL, "static-base-url", "", "static files base URL")
+	flag.StringVar(&templatesDir, "templates-dir", "./templates", "templates directory")
+	flag.StringVar(&recipesDir, "recipes-dir", "", "recipes directory")
+	flag.BoolVar(&showVersion, "version", false, "show version")
+	flag.Parse()
+
+	if showVersion {
+		fmt.Printf("nopm-sh version %s", version)
+		os.Exit(0)
+	}
+
+	if staticBaseURL == "" {
+		staticBaseURL = os.Getenv("STATIC_BASE_URL")
+	}
+
+	if staticBaseURL == "" {
+		staticBaseURL = "./templates"
+	}
+
+	if redisAddr == "" {
+		redisAddr = os.Getenv("REDIS_ADDR")
+	}
+
+	if redisAddr == "" {
+		redisAddr = "localhost:6379"
+	}
+
+	if recipesDir == "" {
+		recipesDir = os.Getenv("RECIPES_DIR")
+	}
+
+	githubToken = os.Getenv("GITHUB_TOKEN")
+	if githubToken == "" {
+		log.Fatal("GITHUB_TOKEN environment variable empty")
+	}
+
+	redisClient = redis.NewClient(&redis.Options{
+		Addr:     redisAddr,
+		Password: "",
+		DB:       redisDB,
 	})
 
-	router.GET("/md/:recipeName/more", func(c *gin.Context) {
-		recipeName := c.Param("recipeName")
-		recipeQuery := recipesEngine.ParseRecipeRawName(recipeName)
-		recipe, err := recipeQuery.Get()
-		if err != nil {
-			c.String(http.StatusNotFound, "Recipe not found")
-			return
-		}
-		if recipe.MoreMD == nil {
-			c.String(http.StatusNotFound, "Recipe additional documentation not found")
-			return
-		}
-		c.Data(http.StatusOK, "text/plain; charset=utf-8", recipe.MoreMD)
-	})
+	recipesEngine = core.NewRecipeEngine(redisClient, recipesDir)
+
+	// router := gin.Default()
+	router := setupRouter()
 
 	router.Run(listenAddr)
 }
