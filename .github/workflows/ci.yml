@@ -33,7 +33,7 @@ jobs:
     - name: Tests
       run: go test -v ./...
       env:
-        TEST_REDIS_ADDR: redis:${{ job.services.redis.ports[6379] }}
+        TEST_REDIS_ADDR: localhost:${{ job.services.redis.ports[6379] }}
 
     - name: docker build
       run: docker build -t nopmsh/nopm-sh .
