@@ -8,6 +8,8 @@ RUN make build
 
 FROM debian
 
+RUN apt-get update && apt-get install -y ca-certificates
+
 COPY --from=builder /build/nopm-sh/nopm-sh /usr/local/bin/nopm-sh
 COPY --from=builder /build/nopm-sh/templates /nopm-sh/templates
 
