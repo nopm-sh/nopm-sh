@@ -4,7 +4,7 @@
     "clipboard": "^2.0.4",
     "font-logos": "^0.12.1",
     "ionicons": "^4.6.3",
-    "jquery": "^3.4.0",
+    "jquery": "^3.5.0",
     "popper.js": "1.14.7"
   }
 }
